@@ -23,6 +23,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"go.etcd.io/etcd/clientv3"
@@ -37,7 +38,11 @@ func main() {
 	if err != nil {
 		// handle error!
 		zap.L().Info("hello world")
+
+		fmt.Println("hello world")
 	}
+
+	fmt.Println(cli)
 	defer cli.Close()
 
 	logger, _ := zap.NewProduction()
