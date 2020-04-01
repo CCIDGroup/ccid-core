@@ -15,8 +15,21 @@
  */
 package main
 
-import ()
+import "github.com/CCIDGroup/ccid-core/utils"
+
+type Demo struct {
+	Id   int
+	Name string
+}
 
 func main() {
+	//ctx:= context.Background()
+	//cli, _ := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	////cli.ClientVersion()
+	//ver,_ := cli.ServerVersion(ctx)
+	//
+	//fmt.Println(ver)
 
+	l, _ := (&utils.L{}).InitL()
+	l.LogOne("demo", Demo{123, "hello world"})
 }
