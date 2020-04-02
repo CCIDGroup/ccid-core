@@ -13,8 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package main
+package container
 
-func main() {
+type CheckList struct {
+	DockerEngineVersion string //docker 版本
+	IsAvailable         bool   //docker 是否可用
+	DiskSpace           uint   //存储位置的磁盘大小
+	DiskSpaceUnit       string //磁盘大小的单位
+	ImageStorePath      string //磁盘存储位置
+	ContainerStorePath  string //容器存储位置
+}
 
+func (cl *CheckList) Check() (*CheckList, error) {
+	return nil, nil
 }

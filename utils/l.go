@@ -24,28 +24,25 @@ import (
 	"sync"
 )
 
-const (
-	LOGPATH = "./logs"
-)
-
-type L struct {
-	logger *zap.Logger
-	wg     sync.WaitGroup
+type log struct {
+	logger  *zap.Logger
+	wg      sync.WaitGroup
+	LogPath string
 }
 
+var l = &log{}
+
 func init() {
-	_, err := os.Stat(LOGPATH)
+	l.LogPath = "./logs"
+	_, err := os.Stat(l.LogPath)
 	if err != nil {
 		// 创建文件夹
-		err := os.Mkdir(LOGPATH, os.ModePerm)
+		err := os.Mkdir(l.LogPath, os.ModePerm)
 		if err != nil {
 			fmt.Printf("mkdir failed![%v]\n", err)
 		}
 	}
-}
 
-//初始化日志模块
-func (l *L) InitL() (*L, error) {
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:        "time",
 		LevelKey:       "level",
@@ -60,55 +57,43 @@ func (l *L) InitL() (*L, error) {
 		EncodeCaller:   zapcore.FullCallerEncoder,      // 全路径编码器
 		EncodeName:     zapcore.FullNameEncoder,
 	}
-
 	// 设置日志级别
 	atom := zap.NewAtomicLevelAt(zap.DebugLevel)
-
 	config := zap.Config{
-		Level:            atom,                                       // 日志级别
-		Development:      true,                                       // 开发模式，堆栈跟踪
-		Encoding:         "json",                                     // 输出格式 console 或 json
-		EncoderConfig:    encoderConfig,                              // 编码器配置
-		OutputPaths:      []string{"stdout", LOGPATH + "/info.log"},  // 输出到指定文件 stdout（标准输出，正常颜色）
-		ErrorOutputPaths: []string{"stderr", LOGPATH + "/error.log"}, // stderr（错误输出，红色）
+		Level:            atom,                                         // 日志级别
+		Development:      true,                                         // 开发模式，堆栈跟踪
+		Encoding:         "json",                                       // 输出格式 console 或 json
+		EncoderConfig:    encoderConfig,                                // 编码器配置
+		OutputPaths:      []string{"stdout", l.LogPath + "/info.log"},  // 输出到指定文件 stdout（标准输出，正常颜色）
+		ErrorOutputPaths: []string{"stderr", l.LogPath + "/error.log"}, // stderr（错误输出，红色）
 	}
-
 	// 构建日志
-	logger, err := config.Build()
-
-	l.logger = logger
-	return l, err
+	l.logger, _ = config.Build()
+	l.LogPath = "./logs"
 }
 
-func (l *L) LogMsg(desc string, msg string) {
-	l.wg.Add(1)
-	go func() {
-		l.logger.Info(desc, zap.String("message", msg))
-		l.wg.Done()
-	}()
-	l.wg.Wait()
+func LogMsg(desc string, msg string) {
+	go l.logger.Info(msg)
 
 }
 
-func (l *L) LogOne(desc string, u interface{}) {
-	l.wg.Add(1)
-	go l.logObj(desc, u)
-	l.wg.Wait()
+func LogError(err error) {
+	go l.logger.Error(err.Error())
+}
+
+func LogOne(desc string, u interface{}) {
+	go logObj(desc, u)
 
 }
 
-func (l *L) LogList(list map[string]interface{}) {
-	l.wg.Add(len(list))
-
+func LogList(list map[string]interface{}) {
 	for k, v := range list {
-		go l.logObj(k, v)
+		go logObj(k, v)
 	}
-	l.wg.Wait()
-
 }
 
 //log interface 类型
-func (l *L) logObj(desc string, u interface{}) {
+func logObj(desc string, u interface{}) {
 	keys := reflect.TypeOf(u)
 	values := reflect.ValueOf(u)
 	m := &[]zap.Field{}
@@ -124,5 +109,4 @@ func (l *L) logObj(desc string, u interface{}) {
 	}
 	fmt.Println(m)
 	l.logger.Info(desc, *m...)
-	l.wg.Done()
 }

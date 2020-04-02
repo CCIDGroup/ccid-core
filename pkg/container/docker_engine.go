@@ -13,8 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package main
+package container
 
-func main() {
+import (
+	"context"
+	"github.com/CCIDGroup/ccid-core/utils"
+	"github.com/docker/docker/client"
+)
 
+var e = &Engine{}
+
+type Engine struct {
+	Ctx      context.Context
+	Instance *client.Client
+}
+
+func init() {
+	ctx := context.Background()
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		panic(err)
+	}
+	e.Instance = cli
+	e.Ctx = ctx
 }
