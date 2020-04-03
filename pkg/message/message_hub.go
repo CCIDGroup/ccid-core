@@ -13,19 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package container
+package message
 
-//container的基本数据类型
-type C struct {
-	Image     string   // container image name, format: image_name:tag
-	Endpoint  string   // Image endpoint, such as: docker.com/nginx
-	Env       []string //运行docker所需要的环境变量
-	Parameter []string //创建container时候需要传递的参数
-	Options   string   //创建container时的可选参数
-	Ports     []string //端口映射
-	Volumes   []string //磁盘映射
+import "fmt"
+
+func Connect() {
+
 }
 
-func (c *C) PullImage() {
-
+func Push(revId string, msg string) {
+	fmt.Print(msg)
 }

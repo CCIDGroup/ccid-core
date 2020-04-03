@@ -19,36 +19,36 @@ import (
 	"fmt"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"io"
 	"os"
 	"reflect"
 	"sync"
 )
 
-type log struct {
+type Log struct {
 	logger  *zap.Logger
 	wg      sync.WaitGroup
-	LogPath string
+	logPath string
 }
 
-var l = &log{}
+func (l *Log) InitLog() *Log {
 
-func init() {
-	l.LogPath = "./logs"
-	_, err := os.Stat(l.LogPath)
+	l.logPath = "./logs"
+
+	_, err := os.Stat(l.logPath)
 	if err != nil {
 		// 创建文件夹
-		err := os.Mkdir(l.LogPath, os.ModePerm)
+		err := os.Mkdir(l.logPath, os.ModePerm)
 		if err != nil {
 			fmt.Printf("mkdir failed![%v]\n", err)
 		}
 	}
-
 	encoderConfig := zapcore.EncoderConfig{
 		TimeKey:        "time",
 		LevelKey:       "level",
 		NameKey:        "logger",
 		CallerKey:      "linenum",
-		MessageKey:     "msg",
+		MessageKey:     "",
 		StacktraceKey:  "stacktrace",
 		LineEnding:     zapcore.DefaultLineEnding,
 		EncodeLevel:    zapcore.LowercaseLevelEncoder,  // 小写编码器
@@ -62,38 +62,61 @@ func init() {
 	config := zap.Config{
 		Level:            atom,                                         // 日志级别
 		Development:      true,                                         // 开发模式，堆栈跟踪
-		Encoding:         "json",                                       // 输出格式 console 或 json
+		Encoding:         "console",                                    // 输出格式 console 或 json
 		EncoderConfig:    encoderConfig,                                // 编码器配置
-		OutputPaths:      []string{"stdout", l.LogPath + "/info.log"},  // 输出到指定文件 stdout（标准输出，正常颜色）
-		ErrorOutputPaths: []string{"stderr", l.LogPath + "/error.log"}, // stderr（错误输出，红色）
+		OutputPaths:      []string{"stdout", l.logPath + "/info.log"},  // 输出到指定文件 stdout（标准输出，正常颜色）
+		ErrorOutputPaths: []string{"stderr", l.logPath + "/error.log"}, // stderr（错误输出，红色）
 	}
 	// 构建日志
 	l.logger, _ = config.Build()
-	l.LogPath = "./logs"
+	l.logPath = "./logs"
+	return l
 }
 
-func LogMsg(desc string, msg string) {
+func (l *Log) LogStream(rev string, reader io.Reader) {
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		buf := make([]byte, 1024)
+		fmt.Println("RevID is " + rev)
+		out, _ := os.Create("/tmp/ccid/" + rev + ".log")
+		defer out.Close()
+		for {
+			// 循环读取文件
+			n, err2 := reader.Read(buf)
+			if err2 == io.EOF { // io.EOF表示文件末尾
+				break
+			}
+			out.Write(buf[:n])
+			fmt.Print(string(buf[:n]))
+		}
+		wg.Done()
+	}()
+	wg.Wait()
+}
+
+func (l *Log) LogMsg(msg string) {
 	go l.logger.Info(msg)
 
 }
 
-func LogError(err error) {
+func (l *Log) LogError(err error) {
 	go l.logger.Error(err.Error())
 }
 
-func LogOne(desc string, u interface{}) {
-	go logObj(desc, u)
+func (l *Log) LogOne(desc string, u interface{}) {
+	go l.logObj(desc, u)
 
 }
 
-func LogList(list map[string]interface{}) {
+func (l *Log) LogList(list map[string]interface{}) {
 	for k, v := range list {
-		go logObj(k, v)
+		go l.logObj(k, v)
 	}
 }
 
 //log interface 类型
-func logObj(desc string, u interface{}) {
+func (l *Log) logObj(desc string, u interface{}) {
 	keys := reflect.TypeOf(u)
 	values := reflect.ValueOf(u)
 	m := &[]zap.Field{}

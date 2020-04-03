@@ -15,6 +15,12 @@
  */
 package main
 
-func main() {
+import (
+	"github.com/CCIDGroup/ccid-core/utils"
+	"time"
+)
 
+func main() {
+	utils.LogMsg("hello world")
+	time.Sleep(time.Second * 3)
 }

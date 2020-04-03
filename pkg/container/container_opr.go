@@ -15,15 +15,17 @@
  */
 package container
 
-type CheckList struct {
-	DockerEngineVersion string  //docker 版本
-	IsAvailable         bool    //docker 是否可用
-	FreeDiskSpace       float64 //存储位置的磁盘大小
-	DiskSpaceUnit       string  //磁盘大小的单位
-	ImageStorePath      string  //磁盘存储位置
-	ContainerStorePath  string  //容器存储位置
+//container的基本数据类型
+type ContainerOpr struct {
+	Image     string   // container image name, format: image_name:tag
+	Endpoint  string   // Image endpoint, such as: docker.com/nginx
+	Env       []string //运行docker所需要的环境变量
+	Parameter []string //创建container时候需要传递的参数
+	Options   string   //创建container时的可选参数
+	Ports     []string //端口映射
+	Volumes   []string //磁盘映射
 }
 
-func (cl *CheckList) Check() (*CheckList, error) {
-	return GetDockerEngineInfo()
+func (c *ContainerOpr) PullImage() {
+
 }
