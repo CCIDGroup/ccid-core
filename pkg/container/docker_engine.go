@@ -17,12 +17,11 @@ package container
 
 import (
 	"context"
-	"fmt"
-	"github.com/CCIDGroup/ccid-core/utils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"io"
 	"runtime"
 	"time"
 )
@@ -79,7 +78,7 @@ func GetDockerEngineInfo() (*CheckList, error) {
 		cl.ImageStorePath = "unknown"
 	}
 	cl.DiskSpaceUnit = unit
-	cl.FreeDiskSpace = utils.GetFreeDiskSpace(cl.ImageStorePath)
+	//cl.FreeDiskSpace = utils.GetFreeDiskSpace(cl.ImageStorePath)
 
 	return cl, err
 }
@@ -89,9 +88,8 @@ func PullImage(image string) (*chan string, error) {
 	if err != nil {
 		return nil, err
 	}
-	//io.Copy(os.Stdout, reader)
-	l := (&utils.Log{}).InitLog()
-	return l.LogStream(reader), nil
+	ch := logStream(reader)
+	return ch, nil
 }
 
 func CreateContainer(c *ConOpr) (string, error) {
@@ -115,7 +113,6 @@ func CreateContainer(c *ConOpr) (string, error) {
 }
 
 func StartContainer(c *ConOpr) error {
-
 	if err := e.Instance.ContainerStart(e.Ctx, c.ID, types.ContainerStartOptions{}); err != nil {
 		return err
 	}
@@ -154,20 +151,17 @@ func ExecContainer(c *ConOpr) (*chan string, error) {
 		Cmd:          []string{"/bin/sh"},
 	})
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 	execAttachConfig := types.ExecStartCheck{
 		Detach: false,
 		Tty:    true,
 	}
-	containerConn, errc := e.Instance.ContainerExecAttach(e.Ctx, exec.ID, execAttachConfig)
+	containerConn, e := e.Instance.ContainerExecAttach(e.Ctx, exec.ID, execAttachConfig)
 	if err != nil {
-		fmt.Println(errc)
-		return nil, errc
+		return nil, e
 	}
-	l := (&utils.Log{}).InitLog()
-	return l.LogStream(containerConn.Reader), nil
+	return logStream(containerConn.Reader), nil
 }
 
 func LogContainer(c *ConOpr) (*chan string, error) {
@@ -184,41 +178,22 @@ func LogContainer(c *ConOpr) (*chan string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer reader.Close()
-
-	l := (&utils.Log{}).InitLog()
-	return l.LogStream(reader), nil
+	return logStream(reader), nil
 }
 
-//func conStream(waiter io.ReadCloser) <- chan string {
-//	inout := make(chan []byte)
-//
-//	go  io.Copy(os.Stdout, waiter.Reader)
-//	go  io.Copy(os.Stderr, waiter.Reader)
-//
-//	if err != nil {
-//		panic(err)
-//	}
-//
-//	go func() {
-//		scanner := bufio.NewScanner(os.Stdin)
-//		for scanner.Scan() {
-//			inout <- []byte(scanner.Text())
-//		}
-//	}()
-//
-//	// Write to docker container
-//	go func(w io.WriteCloser) {
-//		for {
-//			data, ok := <-inout
-//			//log.Println("Received to send to docker", string(data))
-//			if !ok {
-//				fmt.Println("!ok")
-//				w.Close()
-//				return
-//			}
-//
-//			w.Write(append(data, '\n'))
-//		}
-//	}(waiter.Conn)
-//}
+func logStream(reader io.Reader) *chan string {
+	r := make(chan string)
+	go func() {
+		for {
+			buf := make([]byte, 1024)
+			// 循环读取文件
+			n, err2 := reader.Read(buf)
+			if err2 != nil {
+				break
+			}
+			r <- string(buf[:n])
+		}
+		close(r)
+	}()
+	return &r
+}

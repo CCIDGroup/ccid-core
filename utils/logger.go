@@ -19,11 +19,15 @@ import (
 	"fmt"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"io"
+	"log"
 	"os"
+	"path/filepath"
 	"reflect"
+	"strings"
 	"sync"
 )
+
+var l = &Log{}
 
 type Log struct {
 	logger       *zap.Logger
@@ -34,7 +38,16 @@ type Log struct {
 	logErrorPath string
 }
 
-func (l *Log) InitLog() *Log {
+func getCurrentDirectory() string {
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	if err != nil {
+		log.Fatal(err)
+	}
+	return strings.Replace(dir, "\\", "/", -1)
+}
+
+func init() {
+	l.logPath = getCurrentDirectory()
 	_, err := os.Stat(l.logPath)
 	if err != nil {
 		// 创建文件夹
@@ -69,49 +82,28 @@ func (l *Log) InitLog() *Log {
 	}
 	// 构建日志
 	l.logger, _ = config.Build()
-	return l
 }
 
-func (l *Log) LogStream(reader io.Reader) *chan string {
-	r := make(chan string)
-	go func() {
-
-		//out, _ := os.Create(l.logPath)
-		//defer out.Close()
-		for {
-			buf := make([]byte, 1024)
-			// 循环读取文件
-			n, err2 := reader.Read(buf)
-			if err2 != nil { // io.EOF表示文件末尾
-				break
-			}
-			r <- string(buf[:n])
-		}
-		close(r)
-	}()
-	return &r
-}
-
-func (l *Log) LogMsg(msg string) {
+func LogMsg(msg string) {
 	go l.logger.Info(msg)
 }
 
-func (l *Log) LogError(err error) {
+func LogError(err error) {
 	go l.logger.Error(err.Error())
 }
 
-func (l *Log) LogOne(desc string, u interface{}) {
-	go l.logObj(desc, u)
+func LogOne(desc string, u interface{}) {
+	go logObj(desc, u)
 }
 
-func (l *Log) LogList(list map[string]interface{}) {
+func LogList(list map[string]interface{}) {
 	for k, v := range list {
-		go l.logObj(k, v)
+		go logObj(k, v)
 	}
 }
 
 //log interface 类型
-func (l *Log) logObj(desc string, u interface{}) {
+func logObj(desc string, u interface{}) {
 	keys := reflect.TypeOf(u)
 	values := reflect.ValueOf(u)
 	m := &[]zap.Field{}
