@@ -1,6 +1,8 @@
 package container
 
 import (
+	"fmt"
+	"github.com/CCIDGroup/ccid-core/utils"
 	"testing"
 )
 
@@ -31,7 +33,91 @@ func TestGetDockerEngineInfo(t *testing.T) {
 
 func TestPullImage(t *testing.T) {
 	type args struct {
+		rev   string
 		image string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *chan string
+		wantErr bool
+	}{
+		{
+			"minio/minio",
+			args{
+				utils.GenerateTaskID(),
+				"minio/minio",
+			},
+			nil,
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := PullImage(tt.args.image)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("PullImage() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			for {
+				val, ok := <-*got
+				if ok == false {
+					fmt.Println("pull image done")
+					break
+				} else {
+					fmt.Print(val)
+				}
+			}
+		})
+	}
+}
+
+func TestCreateContainer(t *testing.T) {
+	type args struct {
+		c *ConOpr
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *chan string
+		wantErr bool
+	}{
+		{
+			"start minio",
+			args{
+				c: &ConOpr{
+					Name:     "c_201012121212",
+					Image:    "minio/minio",
+					Endpoint: "",
+					Env:      []string{},
+					Cmd:      []string{"server", "/data"},
+					Options:  "",
+					Ports:    []string{"9000:9000"},
+					Volumes:  []string{},
+				},
+			},
+			nil,
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			id, err := CreateContainer(tt.args.c)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("StartContainer() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			fmt.Println(id)
+			//if !reflect.DeepEqual(got, tt.want) {
+			//	t.Errorf("StartContainer() got = %v, want %v", got, tt.want)
+			//}
+		})
+	}
+}
+
+func TestStartContainer(t *testing.T) {
+	type args struct {
+		c *ConOpr
 	}
 	tests := []struct {
 		name    string
@@ -39,16 +125,106 @@ func TestPullImage(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			"minio/minio",
-			args{"minio/minio"},
+			"TestStartContainer",
+			args{
+				&ConOpr{
+					ID: "a8f08a9161627519b564639935a51ff861ef33462479042c0b9252a0a0a23eec",
+				},
+			},
 			false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := PullImage(tt.args.image); (err != nil) != tt.wantErr {
-				t.Errorf("PullImage() error = %v, wantErr %v", err, tt.wantErr)
+			if err := StartContainer(tt.args.c); (err != nil) != tt.wantErr {
+				t.Errorf("StartContainer() error = %v, wantErr %v", err, tt.wantErr)
 			}
+
+		})
+	}
+}
+
+func TestLogContainer(t *testing.T) {
+	type args struct {
+		c *ConOpr
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *chan string
+		wantErr bool
+	}{
+		{
+			"TestLogContainer",
+			args{
+				&ConOpr{
+					ID: "a8f08a9161627519b564639935a51ff861ef33462479042c0b9252a0a0a23eec",
+				},
+			},
+			nil,
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := LogContainer(tt.args.c)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("LogContainer() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			for {
+				val, ok := <-*got
+				if ok == false {
+					fmt.Println("log done")
+					break
+				} else {
+					fmt.Print(val)
+				}
+			}
+		})
+	}
+
+}
+
+func TestExecContainer(t *testing.T) {
+	type args struct {
+		c *ConOpr
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *chan string
+		wantErr bool
+	}{
+		{
+			"TestLogContainer",
+			args{
+				&ConOpr{
+					ID: "a8f08a9161627519b564639935a51ff861ef33462479042c0b9252a0a0a23eec",
+				},
+			},
+			nil,
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ExecContainer(tt.args.c)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ExecContainer() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			for {
+				val, ok := <-*got
+				if ok == false {
+					fmt.Println("pull image done")
+					break
+				} else {
+					fmt.Print(val)
+				}
+			}
+
 		})
 	}
 }

@@ -16,20 +16,23 @@
 package container
 
 import (
-	"bytes"
 	"context"
+	"fmt"
 	"github.com/CCIDGroup/ccid-core/utils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
 	"runtime"
+	"time"
 )
 
 const (
-	macPath     = "~/Library/Containers/com.docker.docker/Data/vms/0/"
-	linuxPath   = "/var/lib/docker"
-	windowsPath = "C:\\ProgramData\\DockerDesktop"
-	unit        = "MB"
+	macPath      = "~/Library/Containers/com.docker.docker/Data/vms/0/"
+	linuxPath    = "/var/lib/docker"
+	windowsPath  = "C:\\ProgramData\\DockerDesktop"
+	relativePath = "/tmp/ccid/"
+	unit         = "MB"
 )
 
 var e = &Engine{}
@@ -81,51 +84,141 @@ func GetDockerEngineInfo() (*CheckList, error) {
 	return cl, err
 }
 
-func PullImage(image string) error {
-
+func PullImage(image string) (*chan string, error) {
 	reader, err := e.Instance.ImagePull(e.Ctx, image, types.ImagePullOptions{})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	rev := utils.GenerateTaskID()
+	//io.Copy(os.Stdout, reader)
 	l := (&utils.Log{}).InitLog()
-	l.LogStream(rev, reader)
-	return nil
+	return l.LogStream(reader), nil
 }
 
-func RunContainer(c *ContainerOpr) error {
-
+func CreateContainer(c *ConOpr) (string, error) {
+	image := c.Image
+	if c.Endpoint != "" {
+		image = c.Endpoint + "/" + image
+	}
+	exposedPorts, portBindings, _ := nat.ParsePortSpecs(c.Ports)
 	resp, err := e.Instance.ContainerCreate(e.Ctx, &container.Config{
-		Image: "alpine",
-		Cmd:   []string{"echo", "hello world"},
-		Tty:   true,
-	}, nil, nil, "")
-	if err != nil {
+		Image:        image,
+		Env:          c.Env,
+		ExposedPorts: exposedPorts,
+		Cmd:          c.Cmd,
+		Tty:          true,
+	}, &container.HostConfig{
+		Binds:        c.Volumes,
+		PortBindings: portBindings,
+	}, nil, c.Name)
+	c.ID = resp.ID
+	return c.ID, err
+}
+
+func StartContainer(c *ConOpr) error {
+
+	if err := e.Instance.ContainerStart(e.Ctx, c.ID, types.ContainerStartOptions{}); err != nil {
 		return err
 	}
-
-	if err := e.Instance.ContainerStart(e.Ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
-		return err
-	}
-
-	statusCh, errCh := e.Instance.ContainerWait(e.Ctx, resp.ID, container.WaitConditionNotRunning)
-	select {
-	case err := <-errCh:
-		if err != nil {
-			return err
-		}
-	case <-statusCh:
-	}
-
-	out, err := e.Instance.ContainerLogs(e.Ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
-	if err != nil {
-		return err
-	}
-
-	//stdcopy.StdCopy(os.Stdout, os.Stderr, out)
-
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(out)
-
 	return nil
 }
+
+func StopContainer(c *ConOpr) error {
+	timeout := time.Second * 1
+	if err := e.Instance.ContainerStop(e.Ctx, c.ID, &timeout); err != nil {
+		return err
+	}
+	return nil
+}
+
+func RemoveContainer(c *ConOpr) error {
+	if err := e.Instance.ContainerRemove(e.Ctx, c.ID, types.ContainerRemoveOptions{
+		RemoveVolumes: true,
+		RemoveLinks:   true,
+		Force:         true,
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func ExecContainer(c *ConOpr) (*chan string, error) {
+	exec, err := e.Instance.ContainerExecCreate(e.Ctx, c.ID, types.ExecConfig{
+		User:         "",
+		Privileged:   true,
+		Tty:          true,
+		AttachStdin:  true,
+		AttachStderr: true,
+		AttachStdout: true,
+		Detach:       false,
+		Env:          []string{},
+		Cmd:          []string{"/bin/sh"},
+	})
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+	execAttachConfig := types.ExecStartCheck{
+		Detach: false,
+		Tty:    true,
+	}
+	containerConn, errc := e.Instance.ContainerExecAttach(e.Ctx, exec.ID, execAttachConfig)
+	if err != nil {
+		fmt.Println(errc)
+		return nil, errc
+	}
+	l := (&utils.Log{}).InitLog()
+	return l.LogStream(containerConn.Reader), nil
+}
+
+func LogContainer(c *ConOpr) (*chan string, error) {
+	reader, err := e.Instance.ContainerLogs(e.Ctx, c.ID, types.ContainerLogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Since:      "",
+		Until:      "",
+		Timestamps: false,
+		Follow:     false,
+		Tail:       "",
+		Details:    false,
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+
+	l := (&utils.Log{}).InitLog()
+	return l.LogStream(reader), nil
+}
+
+//func conStream(waiter io.ReadCloser) <- chan string {
+//	inout := make(chan []byte)
+//
+//	go  io.Copy(os.Stdout, waiter.Reader)
+//	go  io.Copy(os.Stderr, waiter.Reader)
+//
+//	if err != nil {
+//		panic(err)
+//	}
+//
+//	go func() {
+//		scanner := bufio.NewScanner(os.Stdin)
+//		for scanner.Scan() {
+//			inout <- []byte(scanner.Text())
+//		}
+//	}()
+//
+//	// Write to docker container
+//	go func(w io.WriteCloser) {
+//		for {
+//			data, ok := <-inout
+//			//log.Println("Received to send to docker", string(data))
+//			if !ok {
+//				fmt.Println("!ok")
+//				w.Close()
+//				return
+//			}
+//
+//			w.Write(append(data, '\n'))
+//		}
+//	}(waiter.Conn)
+//}

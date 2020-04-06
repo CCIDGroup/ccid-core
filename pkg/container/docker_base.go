@@ -7,5 +7,5 @@ type DI interface {
 
 type D struct {
 	CheckList
-	ContainerOpr
+	ConOpr
 }
