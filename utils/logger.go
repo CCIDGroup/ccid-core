@@ -38,7 +38,7 @@ type Log struct {
 	logErrorPath string
 }
 
-func getCurrentDirectory() string {
+func GetCurrentDirectory() string {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
 		log.Fatal(err)
@@ -47,7 +47,7 @@ func getCurrentDirectory() string {
 }
 
 func init() {
-	l.logPath = getCurrentDirectory()
+	l.logPath = GetCurrentDirectory()
 	_, err := os.Stat(l.logPath)
 	if err != nil {
 		// 创建文件夹

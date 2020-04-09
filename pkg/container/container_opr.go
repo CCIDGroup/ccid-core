@@ -15,8 +15,11 @@
  */
 package container
 
+import "fmt"
+
 //container的基本数据类型
 type ConOpr struct {
+	RevID    string
 	ID       string   // container ID(when started, It has an ID)
 	Name     string   // container name
 	Image    string   // container image name, format: image_name:tag
@@ -29,6 +32,12 @@ type ConOpr struct {
 	Result   *chan string
 }
 
-func (c *ConOpr) PullImage() {
+func (c *ConOpr) PullImage() (*chan string, error) {
+	ch,err := pullImage(c)
+	if err != nil{
+		fmt.Printf("error when pull image: %s",err.Error())
+		return nil,err
+	}
+	return ch,nil
 
 }

@@ -52,7 +52,7 @@ func init() {
 }
 
 //获取docker相关信息
-func GetDockerEngineInfo() (*CheckList, error) {
+func getDockerEngineInfo() (*CheckList, error) {
 	cl := &CheckList{}
 	ver, err := e.Instance.ServerVersion(e.Ctx)
 	if err != nil {
@@ -83,7 +83,11 @@ func GetDockerEngineInfo() (*CheckList, error) {
 	return cl, err
 }
 
-func PullImage(image string) (*chan string, error) {
+func pullImage(c* ConOpr) (*chan string, error) {
+	image := c.Image
+	if c.Endpoint != "" {
+		image = c.Endpoint + "/" + image
+	}
 	reader, err := e.Instance.ImagePull(e.Ctx, image, types.ImagePullOptions{})
 	if err != nil {
 		return nil, err
@@ -92,7 +96,7 @@ func PullImage(image string) (*chan string, error) {
 	return ch, nil
 }
 
-func CreateContainer(c *ConOpr) (string, error) {
+func createContainer(c *ConOpr) (string, error) {
 	image := c.Image
 	if c.Endpoint != "" {
 		image = c.Endpoint + "/" + image
@@ -112,14 +116,14 @@ func CreateContainer(c *ConOpr) (string, error) {
 	return c.ID, err
 }
 
-func StartContainer(c *ConOpr) error {
+func startContainer(c *ConOpr) error {
 	if err := e.Instance.ContainerStart(e.Ctx, c.ID, types.ContainerStartOptions{}); err != nil {
 		return err
 	}
 	return nil
 }
 
-func StopContainer(c *ConOpr) error {
+func stopContainer(c *ConOpr) error {
 	timeout := time.Second * 1
 	if err := e.Instance.ContainerStop(e.Ctx, c.ID, &timeout); err != nil {
 		return err
@@ -127,7 +131,7 @@ func StopContainer(c *ConOpr) error {
 	return nil
 }
 
-func RemoveContainer(c *ConOpr) error {
+func removeContainer(c *ConOpr) error {
 	if err := e.Instance.ContainerRemove(e.Ctx, c.ID, types.ContainerRemoveOptions{
 		RemoveVolumes: true,
 		RemoveLinks:   true,
@@ -138,7 +142,7 @@ func RemoveContainer(c *ConOpr) error {
 	return nil
 }
 
-func ExecContainer(c *ConOpr) (*chan string, error) {
+func execContainer(c *ConOpr, scripts []string) (*chan string, error) {
 	exec, err := e.Instance.ContainerExecCreate(e.Ctx, c.ID, types.ExecConfig{
 		User:         "",
 		Privileged:   true,
@@ -148,7 +152,7 @@ func ExecContainer(c *ConOpr) (*chan string, error) {
 		AttachStdout: true,
 		Detach:       false,
 		Env:          []string{},
-		Cmd:          []string{"/bin/sh"},
+		Cmd:          scripts,
 	})
 	if err != nil {
 		return nil, err
@@ -164,7 +168,22 @@ func ExecContainer(c *ConOpr) (*chan string, error) {
 	return logStream(containerConn.Reader), nil
 }
 
-func LogContainer(c *ConOpr) (*chan string, error) {
+//func BuildAndPushImage(dockerfile,tag string)(*chan string, error) {
+//	opt := types.ImageBuildOptions{
+//		Dockerfile:   "image/centos7/Dockerfile",
+//	}
+//	resp, err := e.Instance.ImageBuild(context.Background(), nil, opt)
+//	if err == nil {
+//		fmt.Printf("Error, %v", err)
+//	}
+//	options := types.ImagePushOptions{}
+//
+//	return logStream(resp.Body), nil
+//
+//
+//}
+
+func logContainer(c *ConOpr) (*chan string, error) {
 	reader, err := e.Instance.ContainerLogs(e.Ctx, c.ID, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
@@ -173,14 +192,13 @@ func LogContainer(c *ConOpr) (*chan string, error) {
 		Timestamps: false,
 		Follow:     false,
 		Tail:       "",
-		Details:    false,
+		Details:    true,
 	})
 	if err != nil {
 		return nil, err
 	}
 	return logStream(reader), nil
 }
-
 func logStream(reader io.Reader) *chan string {
 	r := make(chan string)
 	go func() {

@@ -2,9 +2,10 @@ package container
 
 import (
 	"fmt"
-	"github.com/CCIDGroup/ccid-core/utils"
 	"testing"
+	"time"
 )
+var ID string
 
 func TestGetDockerEngineInfo(t *testing.T) {
 	tests := []struct {
@@ -20,7 +21,7 @@ func TestGetDockerEngineInfo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetDockerEngineInfo()
+			got, err := getDockerEngineInfo()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetDockerEngineInfo() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -33,8 +34,7 @@ func TestGetDockerEngineInfo(t *testing.T) {
 
 func TestPullImage(t *testing.T) {
 	type args struct {
-		rev   string
-		image string
+		c *ConOpr
 	}
 	tests := []struct {
 		name    string
@@ -45,8 +45,19 @@ func TestPullImage(t *testing.T) {
 		{
 			"minio/minio",
 			args{
-				utils.GenerateTaskID(),
-				"minio/minio",
+				&ConOpr{
+					RevID:    "",
+					ID:       "",
+					Name:     "minio/minio",
+					Image:    "",
+					Endpoint: "",
+					Env:      nil,
+					Cmd:      nil,
+					Options:  "",
+					Ports:    nil,
+					Volumes:  nil,
+					Result:   nil,
+				},
 			},
 			nil,
 			false,
@@ -54,7 +65,7 @@ func TestPullImage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := PullImage(tt.args.image)
+			got, err := pullImage(tt.args.c)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("PullImage() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -73,6 +84,7 @@ func TestPullImage(t *testing.T) {
 }
 
 func TestCreateContainer(t *testing.T) {
+
 	type args struct {
 		c *ConOpr
 	}
@@ -100,19 +112,23 @@ func TestCreateContainer(t *testing.T) {
 			false,
 		},
 	}
+
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			id, err := CreateContainer(tt.args.c)
+			id, err := createContainer(tt.args.c)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("StartContainer() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			fmt.Println(id)
+			ID  = id
 			//if !reflect.DeepEqual(got, tt.want) {
 			//	t.Errorf("StartContainer() got = %v, want %v", got, tt.want)
 			//}
 		})
 	}
+
+
 }
 
 func TestStartContainer(t *testing.T) {
@@ -128,7 +144,7 @@ func TestStartContainer(t *testing.T) {
 			"TestStartContainer",
 			args{
 				&ConOpr{
-					ID: "1890d33e847630f4f4d0b88a0e2746fe54055b219d7530439c6205771cb296ce",
+					ID: ID,
 				},
 			},
 			false,
@@ -136,8 +152,54 @@ func TestStartContainer(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := StartContainer(tt.args.c); (err != nil) != tt.wantErr {
+			if err := startContainer(tt.args.c); (err != nil) != tt.wantErr {
 				t.Errorf("StartContainer() error = %v, wantErr %v", err, tt.wantErr)
+			}
+
+		})
+	}
+	time.Sleep(time.Second*5)
+}
+
+func TestExecContainer(t *testing.T) {
+	type args struct {
+		c *ConOpr
+		scripts []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *chan string
+		wantErr bool
+	}{
+		{
+			"TestLogContainer",
+			args{
+				&ConOpr{
+					ID: ID,
+				},
+				[]string{"echo","hello world"},
+			},
+			nil,
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := execContainer(tt.args.c,tt.args.scripts)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ExecContainer() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			for {
+				val, ok := <-*got
+				if ok == false {
+					fmt.Println("exec container done")
+					break
+				} else {
+					fmt.Print(val)
+				}
 			}
 
 		})
@@ -158,7 +220,7 @@ func TestLogContainer(t *testing.T) {
 			"TestLogContainer",
 			args{
 				&ConOpr{
-					ID: "1890d33e847630f4f4d0b88a0e2746fe54055b219d7530439c6205771cb296ce",
+					ID: ID,
 				},
 			},
 			nil,
@@ -167,7 +229,7 @@ func TestLogContainer(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := LogContainer(tt.args.c)
+			got, err := logContainer(tt.args.c)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("LogContainer() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -184,47 +246,4 @@ func TestLogContainer(t *testing.T) {
 		})
 	}
 
-}
-
-func TestExecContainer(t *testing.T) {
-	type args struct {
-		c *ConOpr
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *chan string
-		wantErr bool
-	}{
-		{
-			"TestLogContainer",
-			args{
-				&ConOpr{
-					ID: "1890d33e847630f4f4d0b88a0e2746fe54055b219d7530439c6205771cb296ce",
-				},
-			},
-			nil,
-			false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := ExecContainer(tt.args.c)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ExecContainer() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			for {
-				val, ok := <-*got
-				if ok == false {
-					fmt.Println("pull image done")
-					break
-				} else {
-					fmt.Print(val)
-				}
-			}
-
-		})
-	}
 }

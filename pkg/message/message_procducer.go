@@ -15,12 +15,4 @@
  */
 package message
 
-import "fmt"
 
-func Connect() {
-
-}
-
-func Push(revId string, msg string) {
-	fmt.Print(msg)
-}
