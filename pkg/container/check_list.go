@@ -24,6 +24,6 @@ type CheckList struct {
 	ContainerStorePath  string  //容器存储位置
 }
 
-func (cl *CheckList) Check() (*CheckList, error) {
-	return GetDockerEngineInfo()
-}
+//func (cl *CheckList) Check() (*CheckList, error) {
+//	return GetDockerEngineInfo()
+//}

@@ -16,11 +16,10 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/storage"
 	"log"
-	"os"
 )
 
 func failOnError(err error, msg string) {
@@ -29,13 +28,16 @@ func failOnError(err error, msg string) {
 	}
 }
 func main() {
-	_, err := git.Clone("/Users/lucas/Downloads", false, &git.CloneOptions{
-		URL:      "https://github.com/sirupsen/logrus.git",
-		Progress: os.Stdout,
+	buf := new(bytes.Buffer)
+	_, err := git.PlainClone("C:\\Users\\xuren\\Downloads\\t1", false, &git.CloneOptions{
+		URL:      "https://github.com/CCIDGroup/ccid-core.git",
+		Progress: buf,
 	})
-
 	if err != nil {
 		fmt.Println(err.Error())
 	}
-
+	fmt.Print(buf.String())
 }
+
+
+

@@ -17,6 +17,8 @@ package container
 
 import (
 	"context"
+	"github.com/CCIDGroup/ccid-core/pkg/artifact"
+	"github.com/CCIDGroup/ccid-core/utils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
@@ -32,6 +34,7 @@ const (
 	windowsPath  = "C:\\ProgramData\\DockerDesktop"
 	relativePath = "/tmp/ccid/"
 	unit         = "MB"
+	codeMapping  = "/usr/app"
 )
 
 var e = &Engine{}
@@ -101,7 +104,9 @@ func createContainer(c *ConOpr) (string, error) {
 	if c.Endpoint != "" {
 		image = c.Endpoint + "/" + image
 	}
+
 	exposedPorts, portBindings, _ := nat.ParsePortSpecs(c.Ports)
+	c.Volumes = append(c.Volumes, utils.GetCurrentDirectory() + artifact.CodePath + ":" + codeMapping)
 	resp, err := e.Instance.ContainerCreate(e.Ctx, &container.Config{
 		Image:        image,
 		Env:          c.Env,

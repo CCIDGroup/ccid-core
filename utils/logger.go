@@ -43,7 +43,7 @@ func GetCurrentDirectory() string {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return strings.Replace(dir, "\\", "/", -1)
+	return strings.Replace(dir, "\\", "/", -1) +"/"
 }
 
 func init() {

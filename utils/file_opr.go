@@ -10,7 +10,7 @@ func Exist(filename string) bool {
 	return err == nil || os.IsExist(err)
 }
 
-func CreateDateDir(path string) error {
+func CreateDir(path string) error {
 	err := os.MkdirAll(path, os.ModePerm)
 	if err != nil {
 		return err

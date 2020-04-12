@@ -102,7 +102,7 @@ func TestCreateContainer(t *testing.T) {
 					Image:    "minio/minio",
 					Endpoint: "",
 					Env:      []string{},
-					Cmd:      []string{"server", "/data"},
+					Cmd:      []string{"server","/data"},
 					Options:  "",
 					Ports:    []string{"9000:9000"},
 					Volumes:  []string{},

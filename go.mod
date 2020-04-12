@@ -13,14 +13,15 @@ require (
 	github.com/docker/docker v0.0.0-20200331113714-bd81cf28590c
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.4.0 // indirect
+	github.com/go-git/go-git/v5 v5.0.0
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/google/uuid v1.1.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
+	github.com/rs/xid v1.2.1
+	github.com/streadway/amqp v0.0.0-20200108173154-1c71cc93ed71 // indirect
 	go.etcd.io/etcd v3.3.19+incompatible
 	go.uber.org/zap v1.14.1
 	google.golang.org/grpc v1.26.0 // indirect
-	github.com/streadway/amqp v0.0.0-20200108173154-1c71cc93ed71  // indirect
-	github.com/go-git/go-git/v5 v5.0.0
 
 )
