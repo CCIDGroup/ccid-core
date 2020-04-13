@@ -23,5 +23,6 @@ require (
 	go.etcd.io/etcd v3.3.19+incompatible
 	go.uber.org/zap v1.14.1
 	google.golang.org/grpc v1.26.0 // indirect
+	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
 
 )

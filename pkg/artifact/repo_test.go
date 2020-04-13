@@ -36,6 +36,7 @@ func Test_plainClone(t *testing.T) {
 			args {
 				&Repo{
 					"https://github.com/go-git/go-git.git",
+					"master",
 					"",
 					"",
 					"",
