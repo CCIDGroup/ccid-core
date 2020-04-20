@@ -18,7 +18,7 @@ package pipeline
 type Stage struct {
 	Name string                   `yaml:"name"`
 	DisplayName string            `yaml:"displayName"`
-	Container   Container         `yaml:"container"`
+	Container   Container         `yaml:"docker"`
 	Repository  Repository        `yaml:"repository"`
 	Variables   map[string]string `yaml:"variables"`
 	Jobs        []Job             `yaml:"jobs"`

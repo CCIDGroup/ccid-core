@@ -16,7 +16,9 @@
 package pipeline
 
 type Container struct {
-	Image    string   `yaml:"image"`// container image name, format: image_name:tag
+	ID       string
+	Name     string
+	Image    string   `yaml:"image"`// docker image name, format: image_name:tag
 	Endpoint string   `yaml:"endpoint"`// Image endpoint, such as: docker.com/nginx
 	Env      []string `yaml:"env"`//运行docker所需要的环境变量
 	Cmd      []string `yaml:"cmd"`//创建container时候需要传递的参数

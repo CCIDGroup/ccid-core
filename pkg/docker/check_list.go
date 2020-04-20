@@ -13,14 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package container
+package docker
 
-type DI interface {
-	Check() (*CheckList, error) //查看当前env是否支持操作docker
-	PullImage(image string)
+type CheckList struct {
+	DockerEngineVersion string  //docker 版本
+	IsAvailable         bool    //docker 是否可用
+	FreeDiskSpace       float64 //存储位置的磁盘大小
+	DiskSpaceUnit       string  //磁盘大小的单位
+	ImageStorePath      string  //磁盘存储位置
+	ContainerStorePath  string  //容器存储位置
 }
 
-type D struct {
-	CheckList
-	ConOpr
-}
+//func (cl *CheckList) Check() (*CheckList, error) {
+//	return GetDockerEngineInfo()
+//}

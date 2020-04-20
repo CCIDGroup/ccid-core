@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package container
+package docker
 
 import (
 	"context"
 	"github.com/CCIDGroup/ccid-core/pkg/artifact"
+	"github.com/CCIDGroup/ccid-core/pkg/pipeline"
 	"github.com/CCIDGroup/ccid-core/utils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -37,27 +38,23 @@ const (
 	codeMapping  = "/usr/app"
 )
 
-var e = &Engine{}
-
-type Engine struct {
-	Ctx      context.Context
-	Instance *client.Client
-}
+var ctx      context.Context
+var instance *client.Client
 
 func init() {
-	ctx := context.Background()
+	ctx = context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		panic(err)
 	}
-	e.Instance = cli
-	e.Ctx = ctx
+	instance = cli
+
 }
 
 //获取docker相关信息
 func getDockerEngineInfo() (*CheckList, error) {
 	cl := &CheckList{}
-	ver, err := e.Instance.ServerVersion(e.Ctx)
+	ver, err := instance.ServerVersion(ctx)
 	if err != nil {
 
 		return nil, err
@@ -86,12 +83,12 @@ func getDockerEngineInfo() (*CheckList, error) {
 	return cl, err
 }
 
-func pullImage(c* ConOpr) (*chan string, error) {
+func pullImage(c *pipeline.Container) (*chan string, error) {
 	image := c.Image
 	if c.Endpoint != "" {
 		image = c.Endpoint + "/" + image
 	}
-	reader, err := e.Instance.ImagePull(e.Ctx, image, types.ImagePullOptions{})
+	reader, err := instance.ImagePull(ctx, image, types.ImagePullOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +96,7 @@ func pullImage(c* ConOpr) (*chan string, error) {
 	return ch, nil
 }
 
-func createContainer(c *ConOpr) (string, error) {
+func createContainer(c *pipeline.Container) (string, error) {
 	image := c.Image
 	if c.Endpoint != "" {
 		image = c.Endpoint + "/" + image
@@ -107,7 +104,7 @@ func createContainer(c *ConOpr) (string, error) {
 
 	exposedPorts, portBindings, _ := nat.ParsePortSpecs(c.Ports)
 	c.Volumes = append(c.Volumes, utils.GetCurrentDirectory() + artifact.CodePath + ":" + codeMapping)
-	resp, err := e.Instance.ContainerCreate(e.Ctx, &container.Config{
+	resp, err := instance.ContainerCreate(ctx, &container.Config{
 		Image:        image,
 		Env:          c.Env,
 		ExposedPorts: exposedPorts,
@@ -121,23 +118,23 @@ func createContainer(c *ConOpr) (string, error) {
 	return c.ID, err
 }
 
-func startContainer(c *ConOpr) error {
-	if err := e.Instance.ContainerStart(e.Ctx, c.ID, types.ContainerStartOptions{}); err != nil {
+func startContainer(c *pipeline.Container) error {
+	if err := instance.ContainerStart(ctx, c.ID, types.ContainerStartOptions{}); err != nil {
 		return err
 	}
 	return nil
 }
 
-func stopContainer(c *ConOpr) error {
+func stopContainer(c *pipeline.Container) error {
 	timeout := time.Second * 1
-	if err := e.Instance.ContainerStop(e.Ctx, c.ID, &timeout); err != nil {
+	if err := instance.ContainerStop(ctx, c.ID, &timeout); err != nil {
 		return err
 	}
 	return nil
 }
 
-func removeContainer(c *ConOpr) error {
-	if err := e.Instance.ContainerRemove(e.Ctx, c.ID, types.ContainerRemoveOptions{
+func removeContainer(c *pipeline.Container) error {
+	if err := instance.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{
 		RemoveVolumes: true,
 		RemoveLinks:   true,
 		Force:         true,
@@ -147,8 +144,8 @@ func removeContainer(c *ConOpr) error {
 	return nil
 }
 
-func execContainer(c *ConOpr, scripts []string) (*chan string, error) {
-	exec, err := e.Instance.ContainerExecCreate(e.Ctx, c.ID, types.ExecConfig{
+func execContainer(c *pipeline.Container, scripts []string) (*chan string, error) {
+	exec, err := instance.ContainerExecCreate(ctx, c.ID, types.ExecConfig{
 		User:         "",
 		Privileged:   true,
 		Tty:          true,
@@ -166,7 +163,7 @@ func execContainer(c *ConOpr, scripts []string) (*chan string, error) {
 		Detach: false,
 		Tty:    true,
 	}
-	containerConn, e := e.Instance.ContainerExecAttach(e.Ctx, exec.ID, execAttachConfig)
+	containerConn, e := instance.ContainerExecAttach(ctx, exec.ID, execAttachConfig)
 	if err != nil {
 		return nil, e
 	}
@@ -177,7 +174,7 @@ func execContainer(c *ConOpr, scripts []string) (*chan string, error) {
 //	opt := types.ImageBuildOptions{
 //		Dockerfile:   "image/centos7/Dockerfile",
 //	}
-//	resp, err := e.Instance.ImageBuild(context.Background(), nil, opt)
+//	resp, err := instance.ImageBuild(context.Background(), nil, opt)
 //	if err == nil {
 //		fmt.Printf("Error, %v", err)
 //	}
@@ -188,8 +185,8 @@ func execContainer(c *ConOpr, scripts []string) (*chan string, error) {
 //
 //}
 
-func logContainer(c *ConOpr) (*chan string, error) {
-	reader, err := e.Instance.ContainerLogs(e.Ctx, c.ID, types.ContainerLogsOptions{
+func logContainer(c *pipeline.Container) (*chan string, error) {
+	reader, err := instance.ContainerLogs(ctx, c.ID, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Since:      "",

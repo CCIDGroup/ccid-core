@@ -1,7 +1,8 @@
-package container
+package docker
 
 import (
 	"fmt"
+	"github.com/CCIDGroup/ccid-core/pkg/pipeline"
 	"testing"
 	"time"
 )
@@ -34,7 +35,7 @@ func TestGetDockerEngineInfo(t *testing.T) {
 
 func TestPullImage(t *testing.T) {
 	type args struct {
-		c *ConOpr
+		c *pipeline.Container
 	}
 	tests := []struct {
 		name    string
@@ -45,18 +46,16 @@ func TestPullImage(t *testing.T) {
 		{
 			"minio/minio",
 			args{
-				&ConOpr{
-					RevID:    "",
+				&pipeline.Container{
 					ID:       "",
 					Name:     "minio/minio",
-					Image:    "",
+					Image:    "minio/minio",
 					Endpoint: "",
 					Env:      nil,
 					Cmd:      nil,
 					Options:  "",
 					Ports:    nil,
 					Volumes:  nil,
-					Result:   nil,
 				},
 			},
 			nil,
@@ -86,7 +85,7 @@ func TestPullImage(t *testing.T) {
 func TestCreateContainer(t *testing.T) {
 
 	type args struct {
-		c *ConOpr
+		c *pipeline.Container
 	}
 	tests := []struct {
 		name    string
@@ -97,7 +96,7 @@ func TestCreateContainer(t *testing.T) {
 		{
 			"start minio",
 			args{
-				c: &ConOpr{
+				c: &pipeline.Container{
 					Name:     "c_201012121212",
 					Image:    "minio/minio",
 					Endpoint: "",
@@ -133,7 +132,7 @@ func TestCreateContainer(t *testing.T) {
 
 func TestStartContainer(t *testing.T) {
 	type args struct {
-		c *ConOpr
+		c *pipeline.Container
 	}
 	tests := []struct {
 		name    string
@@ -143,7 +142,7 @@ func TestStartContainer(t *testing.T) {
 		{
 			"TestStartContainer",
 			args{
-				&ConOpr{
+				&pipeline.Container{
 					ID: ID,
 				},
 			},
@@ -163,7 +162,7 @@ func TestStartContainer(t *testing.T) {
 
 func TestExecContainer(t *testing.T) {
 	type args struct {
-		c *ConOpr
+		c *pipeline.Container
 		scripts []string
 	}
 	tests := []struct {
@@ -175,7 +174,7 @@ func TestExecContainer(t *testing.T) {
 		{
 			"TestLogContainer",
 			args{
-				&ConOpr{
+				&pipeline.Container{
 					ID: ID,
 				},
 				[]string{"echo","hello world"},
@@ -195,7 +194,7 @@ func TestExecContainer(t *testing.T) {
 			for {
 				val, ok := <-*got
 				if ok == false {
-					fmt.Println("exec container done")
+					fmt.Println("exec docker done")
 					break
 				} else {
 					fmt.Print(val)
@@ -208,7 +207,7 @@ func TestExecContainer(t *testing.T) {
 
 func TestLogContainer(t *testing.T) {
 	type args struct {
-		c *ConOpr
+		c *pipeline.Container
 	}
 	tests := []struct {
 		name    string
@@ -219,7 +218,7 @@ func TestLogContainer(t *testing.T) {
 		{
 			"TestLogContainer",
 			args{
-				&ConOpr{
+				&pipeline.Container{
 					ID: ID,
 				},
 			},

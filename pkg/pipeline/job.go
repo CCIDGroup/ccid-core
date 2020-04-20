@@ -18,7 +18,7 @@ package pipeline
 type Job struct {
 	Name string                 `yaml:"name"`
 	DisplayName string          `yaml:"displayName"`
-	Container   Container       `yaml:"container"`
+	Container   Container       `yaml:"docker"`
 	TimeoutInMinutes int32      `yaml:"timeoutInMinutes"`
 	Variables map[string]string `yaml:"variables"`
 	Steps []Step				`yaml:"steps"`
