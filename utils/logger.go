@@ -47,7 +47,9 @@ func GetCurrentDirectory() string {
 }
 
 func init() {
-	l.logPath = GetCurrentDirectory()
+	l.logPath = GetCurrentDirectory()+"logs/"
+	l.logInfoPath = l.logPath +"info.log"
+	l.logErrorPath = l.logPath + "error.log"
 	_, err := os.Stat(l.logPath)
 	if err != nil {
 		// 创建文件夹
@@ -88,8 +90,8 @@ func LogMsg(msg string) {
 	go l.logger.Info(msg)
 }
 
-func LogError(err error) {
-	go l.logger.Error(err.Error())
+func LogError(err error, msg string) {
+	go l.logger.Error(msg+err.Error())
 }
 
 func LogOne(desc string, u interface{}) {

@@ -15,11 +15,23 @@
  */
 package pipeline
 
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"github.com/CCIDGroup/ccid-core/utils"
+	"github.com/go-git/go-git/v5"
+	"github.com/rs/xid"
+	"strings"
+)
+
 type RepositoryType string
 
 const (
 	Github RepositoryType = "Github"
 	Gitea  RepositoryType = "Gitea"
+	CodePath = "/app/"
+
 )
 
 type Repository struct {
@@ -34,4 +46,40 @@ type Repository struct {
 	Folder   string
 	FullPath string
 	Message  string
+}
+
+
+func (repo *Repository) plainClone(pID,runID string) (*Repository, error) {
+	path := utils.GetCurrentDirectory()
+	fullPath := path + pID+"/"+runID + CodePath
+	if !utils.Exist(fullPath){
+		utils.CreateDir(fullPath)
+	}
+	xid := xid.New().String()
+	filePath := fullPath + xid
+	if !utils.Exist(filePath){
+		utils.CreateDir(filePath)
+	}
+
+	repo.Folder = xid
+	repo.FullPath = filePath
+
+	if !strings.HasPrefix(repo.Endpoint, "https://") {
+		return repo, errors.New("wrong git prefix, should be start with https")
+	}
+	url := repo.Endpoint
+	if repo.UserName != "" && repo.Password != "" {
+		relativeUrl := strings.ReplaceAll(repo.Endpoint,"https://","")
+		url = fmt.Sprintf("https://%s:%s@%s", repo.UserName, repo.Password, relativeUrl)
+	}
+	buf := new(bytes.Buffer)
+	_, err := git.PlainClone(filePath, false, &git.CloneOptions{
+		URL:      url,
+		Progress: buf,
+	})
+	if err != nil {
+		return repo, err
+	}
+	repo.Message = buf.String()
+	return repo, nil
 }

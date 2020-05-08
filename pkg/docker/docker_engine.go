@@ -17,15 +17,13 @@ package docker
 
 import (
 	"context"
-	"github.com/CCIDGroup/ccid-core/pkg/artifact"
-	"github.com/CCIDGroup/ccid-core/pkg/pipeline"
-	"github.com/CCIDGroup/ccid-core/utils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"io"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -35,7 +33,6 @@ const (
 	windowsPath  = "C:\\ProgramData\\DockerDesktop"
 	relativePath = "/tmp/ccid/"
 	unit         = "MB"
-	codeMapping  = "/usr/app"
 )
 
 var ctx      context.Context
@@ -52,7 +49,7 @@ func init() {
 }
 
 //获取docker相关信息
-func getDockerEngineInfo() (*CheckList, error) {
+func GetDockerEngineInfo() (*CheckList, error) {
 	cl := &CheckList{}
 	ver, err := instance.ServerVersion(ctx)
 	if err != nil {
@@ -83,11 +80,12 @@ func getDockerEngineInfo() (*CheckList, error) {
 	return cl, err
 }
 
-func pullImage(c *pipeline.Container) (*chan string, error) {
+func PullImage(c *Model) (*chan string, error) {
 	image := c.Image
 	if c.Endpoint != "" {
 		image = c.Endpoint + "/" + image
 	}
+
 	reader, err := instance.ImagePull(ctx, image, types.ImagePullOptions{})
 	if err != nil {
 		return nil, err
@@ -96,14 +94,14 @@ func pullImage(c *pipeline.Container) (*chan string, error) {
 	return ch, nil
 }
 
-func createContainer(c *pipeline.Container) (string, error) {
+func CreateContainer(c *Model) (string, error) {
 	image := c.Image
 	if c.Endpoint != "" {
 		image = c.Endpoint + "/" + image
 	}
 
 	exposedPorts, portBindings, _ := nat.ParsePortSpecs(c.Ports)
-	c.Volumes = append(c.Volumes, utils.GetCurrentDirectory() + artifact.CodePath + ":" + codeMapping)
+	c.Volumes = append(c.Volumes, c.CodePath)
 	resp, err := instance.ContainerCreate(ctx, &container.Config{
 		Image:        image,
 		Env:          c.Env,
@@ -113,19 +111,19 @@ func createContainer(c *pipeline.Container) (string, error) {
 	}, &container.HostConfig{
 		Binds:        c.Volumes,
 		PortBindings: portBindings,
-	}, nil, c.Name)
+	}, nil, "")
 	c.ID = resp.ID
 	return c.ID, err
 }
 
-func startContainer(c *pipeline.Container) error {
+func StartContainer(c *Model) error {
 	if err := instance.ContainerStart(ctx, c.ID, types.ContainerStartOptions{}); err != nil {
 		return err
 	}
 	return nil
 }
 
-func stopContainer(c *pipeline.Container) error {
+func StopContainer(c *Model) error {
 	timeout := time.Second * 1
 	if err := instance.ContainerStop(ctx, c.ID, &timeout); err != nil {
 		return err
@@ -133,7 +131,7 @@ func stopContainer(c *pipeline.Container) error {
 	return nil
 }
 
-func removeContainer(c *pipeline.Container) error {
+func RemoveContainer(c *Model) error {
 	if err := instance.ContainerRemove(ctx, c.ID, types.ContainerRemoveOptions{
 		RemoveVolumes: true,
 		RemoveLinks:   true,
@@ -144,7 +142,7 @@ func removeContainer(c *pipeline.Container) error {
 	return nil
 }
 
-func execContainer(c *pipeline.Container, scripts []string) (*chan string, error) {
+func ExecContainer(c *Model, script string) (*chan string, error) {
 	exec, err := instance.ContainerExecCreate(ctx, c.ID, types.ExecConfig{
 		User:         "",
 		Privileged:   true,
@@ -154,7 +152,7 @@ func execContainer(c *pipeline.Container, scripts []string) (*chan string, error
 		AttachStdout: true,
 		Detach:       false,
 		Env:          []string{},
-		Cmd:          scripts,
+		Cmd:          strings.Split(script," "),
 	})
 	if err != nil {
 		return nil, err
@@ -185,7 +183,7 @@ func execContainer(c *pipeline.Container, scripts []string) (*chan string, error
 //
 //}
 
-func logContainer(c *pipeline.Container) (*chan string, error) {
+func logContainer(c *Model) (*chan string, error) {
 	reader, err := instance.ContainerLogs(ctx, c.ID, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,

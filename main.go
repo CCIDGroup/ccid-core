@@ -16,9 +16,7 @@
 package main
 
 import (
-	"bytes"
-	"fmt"
-	"github.com/go-git/go-git/v5"
+	"github.com/CCIDGroup/ccid-core/pkg/docker"
 	"log"
 )
 
@@ -28,15 +26,7 @@ func failOnError(err error, msg string) {
 	}
 }
 func main() {
-	buf := new(bytes.Buffer)
-	_, err := git.PlainClone("C:\\Users\\xuren\\Downloads\\t1", false, &git.CloneOptions{
-		URL:      "https://github.com/CCIDGroup/ccid-core.git",
-		Progress: buf,
-	})
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-	fmt.Print(buf.String())
+	docker.PullImage(&docker.Model{Image: "runtime:3.1", Endpoint: "mcr.microsoft.com/dotnet/core"})
 }
 
 

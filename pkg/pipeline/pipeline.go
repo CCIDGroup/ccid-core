@@ -15,6 +15,13 @@
  */
 package pipeline
 
+import (
+	"fmt"
+	"github.com/rs/xid"
+	"gopkg.in/yaml.v2"
+	"time"
+)
+
 type Pipeline struct {
 	Name         string            `yaml:"name"`
 	Variables    map[string]string `yaml:"variables"`
@@ -22,8 +29,36 @@ type Pipeline struct {
 	Stages       []Stage           `yaml:"stages"`
 	pipelineName string
 	pipelineID   string
-	runName      string
-	runID        string
 	sourceBranch string
 	sourceCommit string
 }
+
+type Run struct {
+	runID       string
+	runName     string
+	pipeline    *Pipeline
+}
+
+func (p *Pipeline) Create(pipeline string) (*Run,error){
+	err := yaml.Unmarshal([]byte(pipeline), p)
+	if err != nil {
+		return nil, err
+	}
+	p.pipelineID = xid.New().String()
+	r := &Run{}
+	r.runID = xid.New().String()
+	dateTime := time.Now().Format("2006-01-02 15:04:05")
+	r.runName = fmt.Sprintf("pipeline-%vrun-%v start time:%v",p.pipelineID,r.runID,dateTime)
+	r.pipeline = p
+	for _,stage := range p.Stages {
+		stage.RunStage(r)
+	}
+	return r,nil
+}
+
+
+
+
+
+
+

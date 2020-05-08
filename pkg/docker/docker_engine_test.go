@@ -2,7 +2,6 @@ package docker
 
 import (
 	"fmt"
-	"github.com/CCIDGroup/ccid-core/pkg/pipeline"
 	"testing"
 	"time"
 )
@@ -22,7 +21,7 @@ func TestGetDockerEngineInfo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getDockerEngineInfo()
+			got, err := GetDockerEngineInfo()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetDockerEngineInfo() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -35,7 +34,7 @@ func TestGetDockerEngineInfo(t *testing.T) {
 
 func TestPullImage(t *testing.T) {
 	type args struct {
-		c *pipeline.Container
+		c *Model
 	}
 	tests := []struct {
 		name    string
@@ -44,13 +43,12 @@ func TestPullImage(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			"minio/minio",
+			"dotnetsdk",
 			args{
-				&pipeline.Container{
+				&Model{
 					ID:       "",
-					Name:     "minio/minio",
-					Image:    "minio/minio",
-					Endpoint: "",
+					Image:    "sdk:3.1-alpine3.11",
+					Endpoint: "mcr.microsoft.com/dotnet/core",
 					Env:      nil,
 					Cmd:      nil,
 					Options:  "",
@@ -64,7 +62,7 @@ func TestPullImage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := pullImage(tt.args.c)
+			got, err := PullImage(tt.args.c)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("PullImage() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -85,7 +83,7 @@ func TestPullImage(t *testing.T) {
 func TestCreateContainer(t *testing.T) {
 
 	type args struct {
-		c *pipeline.Container
+		c *Model
 	}
 	tests := []struct {
 		name    string
@@ -96,8 +94,7 @@ func TestCreateContainer(t *testing.T) {
 		{
 			"start minio",
 			args{
-				c: &pipeline.Container{
-					Name:     "c_201012121212",
+				c: &Model{
 					Image:    "minio/minio",
 					Endpoint: "",
 					Env:      []string{},
@@ -115,7 +112,7 @@ func TestCreateContainer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			id, err := createContainer(tt.args.c)
+			id, err := CreateContainer(tt.args.c,"/")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("StartContainer() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -132,7 +129,7 @@ func TestCreateContainer(t *testing.T) {
 
 func TestStartContainer(t *testing.T) {
 	type args struct {
-		c *pipeline.Container
+		c *Model
 	}
 	tests := []struct {
 		name    string
@@ -142,7 +139,7 @@ func TestStartContainer(t *testing.T) {
 		{
 			"TestStartContainer",
 			args{
-				&pipeline.Container{
+				&Model{
 					ID: ID,
 				},
 			},
@@ -151,7 +148,7 @@ func TestStartContainer(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := startContainer(tt.args.c); (err != nil) != tt.wantErr {
+			if err := StartContainer(tt.args.c); (err != nil) != tt.wantErr {
 				t.Errorf("StartContainer() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
@@ -162,7 +159,7 @@ func TestStartContainer(t *testing.T) {
 
 func TestExecContainer(t *testing.T) {
 	type args struct {
-		c *pipeline.Container
+		c *Model
 		scripts []string
 	}
 	tests := []struct {
@@ -174,7 +171,7 @@ func TestExecContainer(t *testing.T) {
 		{
 			"TestLogContainer",
 			args{
-				&pipeline.Container{
+				&Model{
 					ID: ID,
 				},
 				[]string{"echo","hello world"},
@@ -185,7 +182,7 @@ func TestExecContainer(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := execContainer(tt.args.c,tt.args.scripts)
+			got, err := ExecContainer(tt.args.c,tt.args.scripts)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ExecContainer() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -207,7 +204,7 @@ func TestExecContainer(t *testing.T) {
 
 func TestLogContainer(t *testing.T) {
 	type args struct {
-		c *pipeline.Container
+		c *Model
 	}
 	tests := []struct {
 		name    string
@@ -218,7 +215,7 @@ func TestLogContainer(t *testing.T) {
 		{
 			"TestLogContainer",
 			args{
-				&pipeline.Container{
+				&Model{
 					ID: ID,
 				},
 			},

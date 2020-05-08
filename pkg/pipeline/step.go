@@ -15,17 +15,8 @@
  */
 package pipeline
 
-type ScriptType string
-
-const (
-	Bash ScriptType = "bash"
-)
 
 type Step struct {
-	script []Script
+		Script string  `yaml:"script"`
 }
 
-type Script struct {
-	Script string          `yaml:"script"`
-	ScriptType ScriptType  `yaml:"type"`
-}
