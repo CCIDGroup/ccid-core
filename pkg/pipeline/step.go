@@ -17,6 +17,6 @@ package pipeline
 
 
 type Step struct {
-		Script string  `yaml:"script"`
+	Script []string  `yaml:"script"`
 }
 

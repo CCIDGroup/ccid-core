@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"github.com/CCIDGroup/ccid-core/utils"
 	"github.com/go-git/go-git/v5"
-	"github.com/rs/xid"
 	"strings"
 )
 
@@ -55,14 +54,8 @@ func (repo *Repository) plainClone(pID,runID string) (*Repository, error) {
 	if !utils.Exist(fullPath){
 		utils.CreateDir(fullPath)
 	}
-	xid := xid.New().String()
-	filePath := fullPath + xid
-	if !utils.Exist(filePath){
-		utils.CreateDir(filePath)
-	}
 
-	repo.Folder = xid
-	repo.FullPath = filePath
+	repo.FullPath = fullPath
 
 	if !strings.HasPrefix(repo.Endpoint, "https://") {
 		return repo, errors.New("wrong git prefix, should be start with https")
@@ -73,7 +66,7 @@ func (repo *Repository) plainClone(pID,runID string) (*Repository, error) {
 		url = fmt.Sprintf("https://%s:%s@%s", repo.UserName, repo.Password, relativeUrl)
 	}
 	buf := new(bytes.Buffer)
-	_, err := git.PlainClone(filePath, false, &git.CloneOptions{
+	_, err := git.PlainClone(fullPath, false, &git.CloneOptions{
 		URL:      url,
 		Progress: buf,
 	})

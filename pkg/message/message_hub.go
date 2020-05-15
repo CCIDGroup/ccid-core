@@ -19,16 +19,21 @@ import (
 	"fmt"
 	"github.com/CCIDGroup/ccid-core/utils"
 	"github.com/streadway/amqp"
+	"log"
+	"time"
 )
 
 type RabbitMQ struct {
 	conn *amqp.Connection
 	ch   *amqp.Channel
 	q    amqp.Queue
+	//exID string
+	runID string
 }
 
-
 func (rmq *RabbitMQ) InitAMQP(runID string) *RabbitMQ{
+	//exID = "testEXID"
+	runID = "testRUNID"
 
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	if err != nil {
@@ -39,28 +44,55 @@ func (rmq *RabbitMQ) InitAMQP(runID string) *RabbitMQ{
 	if err != nil {
 		utils.LogError(err, "Failed to open a channel")
 	}
-	rmq.declareQueue(runID)
+	//rmq.exID = exID
+	rmq.runID = runID
+	rmq.declareQueue()
 	return rmq
 
 }
 
-
-func (rmq *RabbitMQ) declareQueue(queueID string){
+func (rmq *RabbitMQ) declareQueue() {
 	var err error
 	rmq.q, err = rmq.ch.QueueDeclare(
-		queueID,    // name
-		false, // durable
+		rmq.runID,    // name
+		true, // durable
 		false, // delete when unused
-		true,  // exclusive
+		false,  // exclusive
 		false, // no-wait
 		nil,   // arguments
 	)
 	if err != nil {
 		utils.LogError(err, "Failed to declare a queue")
+		return
 	}
-
 }
 
+func (rmq *RabbitMQ) ReadMQ(){
+	var err error
+	replies, err := rmq.ch.Consume(
+		rmq.q.Name, // queue
+		"",     // consumer
+		true,   // auto-ack
+		false,  // exclusive
+		false,  // no-local
+		false,  // no-wait
+		nil,    // args
+	)
+	if err != nil {
+		utils.LogError(err,"error when consuming exchange")
+	}
+
+	forever := make(chan bool)
+
+	go func() {
+		for d := range replies {
+			log.Printf(" [x] %s", d.Body)
+		}
+	}()
+
+	log.Printf(" [*] Waiting for logs. To exit press CTRL+C")
+	<-forever
+}
 
 func (rmq *RabbitMQ) WriteToMQ(ch *chan string) {
 	for {
@@ -71,49 +103,29 @@ func (rmq *RabbitMQ) WriteToMQ(ch *chan string) {
 			fmt.Print(val)
 			err := rmq.ch.Publish(
 				"",         // exchange
-				rmq.q.Name, // routing key
+				rmq.runID, // routing key
 				false, // mandatory
 				false, // immediate
 				amqp.Publishing{
+					DeliveryMode: amqp.Persistent,
 					ContentType: "text/plain",
 					Body:        []byte(val),
+					Timestamp:    time.Now(),
 				})
 			if err != nil {
-				utils.LogError(err, "Failed to bind a queue")
+				fmt.Println(err.Error())
+				utils.LogError(err, "Failed to write a message to exchange")
 			}
 		}
 	}
 }
 
-func (rmq *RabbitMQ) ReadMQ() *chan string {
 
-
-
-	msgs, err := rmq.ch.Consume(
-		rmq.q.Name, // queue
-		"",     // consumer
-		true,   // auto ack
-		false,  // exclusive
-		false,  // no local
-		false,  // no wait
-		nil,    // args
-	)
-	if err != nil {
-		utils.LogError(err, "Failed to register a consumer")
-	}
-
-
-	result := make(chan string)
-
-	go func() {
-		for d := range msgs {
-			result <-  string(d.Body)
-		}
-	}()
-
-	utils.LogMsg(" [*] Waiting for logs. To exit press CTRL+C")
-	return &result
+func (rmq *RabbitMQ) Dispose(){
+	rmq.conn.Close()
+	rmq.ch.Close()
 }
+
 
 
 

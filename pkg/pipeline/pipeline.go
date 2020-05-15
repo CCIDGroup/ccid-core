@@ -27,16 +27,16 @@ type Pipeline struct {
 	Variables    map[string]string `yaml:"variables"`
 	Trigger      Trigger           `yaml:"trigger"`
 	Stages       []Stage           `yaml:"stages"`
-	pipelineName string
-	pipelineID   string
+	PipelineName string
+	PipelineID   string
 	sourceBranch string
 	sourceCommit string
 }
 
 type Run struct {
-	runID       string
-	runName     string
-	pipeline    *Pipeline
+	RunID       string
+	RunName     string
+	Pipeline    *Pipeline
 }
 
 func (p *Pipeline) Create(pipeline string) (*Run,error){
@@ -44,12 +44,12 @@ func (p *Pipeline) Create(pipeline string) (*Run,error){
 	if err != nil {
 		return nil, err
 	}
-	p.pipelineID = xid.New().String()
+	p.PipelineID = xid.New().String()
 	r := &Run{}
-	r.runID = xid.New().String()
+	r.RunID = xid.New().String()
 	dateTime := time.Now().Format("2006-01-02 15:04:05")
-	r.runName = fmt.Sprintf("pipeline-%vrun-%v start time:%v",p.pipelineID,r.runID,dateTime)
-	r.pipeline = p
+	r.RunName = fmt.Sprintf("pipeline-%vrun-%v start time:%v",p.PipelineID,r.RunID,dateTime)
+	r.Pipeline = p
 	for _,stage := range p.Stages {
 		stage.RunStage(r)
 	}

@@ -10,4 +10,5 @@ type Model struct {
 	Ports    []string //端口映射
 	Volumes  []string //磁盘映射
 	CodePath string   //code path
+	HostCodePath string //host code path
 }

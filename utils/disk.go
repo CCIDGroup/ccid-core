@@ -30,3 +30,11 @@ type DiskStatus struct {
 //	disk := DiskUsage(path)
 //	return float64(disk.Free) / float64(MB)
 //}
+
+
+//压缩文件
+//files 文件数组，可以是不同dir下的文件或者文件夹
+//dest 压缩文件存放地址
+
+
+

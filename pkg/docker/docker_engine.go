@@ -16,12 +16,18 @@
 package docker
 
 import (
+	"archive/tar"
+	"bytes"
 	"context"
+	"fmt"
+	"github.com/CCIDGroup/ccid-core/utils"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"io"
+	"io/ioutil"
+	"os"
 	"runtime"
 	"strings"
 	"time"
@@ -31,7 +37,6 @@ const (
 	macPath      = "~/Library/Containers/com.docker.docker/Data/vms/0/"
 	linuxPath    = "/var/lib/docker"
 	windowsPath  = "C:\\ProgramData\\DockerDesktop"
-	relativePath = "/tmp/ccid/"
 	unit         = "MB"
 )
 
@@ -101,13 +106,14 @@ func CreateContainer(c *Model) (string, error) {
 	}
 
 	exposedPorts, portBindings, _ := nat.ParsePortSpecs(c.Ports)
-	c.Volumes = append(c.Volumes, c.CodePath)
+	c.Volumes = append(c.Volumes, c.HostCodePath+":"+c.CodePath)
 	resp, err := instance.ContainerCreate(ctx, &container.Config{
 		Image:        image,
 		Env:          c.Env,
 		ExposedPorts: exposedPorts,
 		Cmd:          c.Cmd,
 		Tty:          true,
+		WorkingDir:   c.CodePath,
 	}, &container.HostConfig{
 		Binds:        c.Volumes,
 		PortBindings: portBindings,
@@ -143,6 +149,7 @@ func RemoveContainer(c *Model) error {
 }
 
 func ExecContainer(c *Model, script string) (*chan string, error) {
+	fmt.Println(script)
 	exec, err := instance.ContainerExecCreate(ctx, c.ID, types.ExecConfig{
 		User:         "",
 		Privileged:   true,
@@ -168,20 +175,67 @@ func ExecContainer(c *Model, script string) (*chan string, error) {
 	return logStream(containerConn.Reader), nil
 }
 
-//func BuildAndPushImage(dockerfile,tag string)(*chan string, error) {
-//	opt := types.ImageBuildOptions{
-//		Dockerfile:   "image/centos7/Dockerfile",
-//	}
-//	resp, err := instance.ImageBuild(context.Background(), nil, opt)
-//	if err == nil {
-//		fmt.Printf("Error, %v", err)
-//	}
-//	options := types.ImagePushOptions{}
-//
-//	return logStream(resp.Body), nil
-//
-//
-//}
+func BuildAndPushImage(dockerfile string)(*chan string, error) {
+
+	buf := new(bytes.Buffer)
+	tw := tar.NewWriter(buf)
+	defer tw.Close()
+
+	dockerFile := "myDockerfile"
+	dockerFileReader, err := os.Open(dockerfile)
+	if err != nil {
+		utils.LogError(err, " :unable to open Dockerfile")
+	}
+	readDockerFile, err := ioutil.ReadAll(dockerFileReader)
+	if err != nil {
+		utils.LogError(err, " :unable to read dockerfile")
+	}
+
+	tarHeader := &tar.Header{
+		Name: dockerFile,
+		Size: int64(len(readDockerFile)),
+	}
+	err = tw.WriteHeader(tarHeader)
+	if err != nil {
+		utils.LogError(err, " :unable to write tar header")
+	}
+	_, err = tw.Write(readDockerFile)
+	if err != nil {
+		utils.LogError(err, " :unable to write tar body")
+	}
+	dockerFileTarReader := bytes.NewReader(buf.Bytes())
+	imageBuildResponse, err := instance.ImageBuild(
+		ctx,
+		dockerFileTarReader,
+		types.ImageBuildOptions{
+			Context:    dockerFileTarReader,
+			Dockerfile: dockerFile,
+			Remove:     true})
+	if err != nil {
+		utils.LogError(err, " :unable to build docker image")
+	}
+	defer imageBuildResponse.Body.Close()
+	_, err = io.Copy(os.Stdout, imageBuildResponse.Body)
+	if err != nil {
+		utils.LogError(err, " :unable to read image build response")
+	}
+	//opt := types.ImageBuildOptions{
+	//	Dockerfile:   dockerfile,
+	//}
+	//resp, err := instance.ImageBuild(ctx, nil, opt)
+	//if err == nil {
+	//	utils.LogError( err,"error when build image")
+	//}
+	//defer resp.Body.Close()
+
+	//options := types.ImagePushOptions{
+	//
+	//}
+	//instance.ImagePush(context.Background(),)
+	return logStream(imageBuildResponse.Body), nil
+
+
+}
 
 func logContainer(c *Model) (*chan string, error) {
 	reader, err := instance.ContainerLogs(ctx, c.ID, types.ContainerLogsOptions{

@@ -17,6 +17,7 @@ require (
 	github.com/go-git/go-git/v5 v5.0.0
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/google/uuid v1.1.1 // indirect
+	github.com/minio/minio-go/v6 v6.0.55 //ct
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/rs/xid v1.2.1
@@ -27,4 +28,5 @@ require (
 	gopkg.in/jeevatkm/go-model.v1 v1.1.0
 	gopkg.in/yaml.v2 v2.2.8
 	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
+
 )

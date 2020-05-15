@@ -21,6 +21,7 @@ type Job struct {
 	TimeoutInMinutes int32      `yaml:"timeoutInMinutes"`
 	Variables map[string]string `yaml:"variables"`
 	Steps []Step				`yaml:"steps"`
+	Container Container         `yaml:"container"`
 }
 
 
